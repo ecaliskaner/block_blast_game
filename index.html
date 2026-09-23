@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111322"><title>POP! — One more blast.</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<header class="site-header"><a class="brand" href="./" aria-label="POP home">pop<span>!</span><i></i></a><div class="header-note"><span></span> SMALL BLOCKS. BIG ENERGY.</div><button class="icon-button" id="sound" aria-label="Enable sound" title="Toggle sound">♫<span class="sound-state">OFF</span></button></header>
+<main>
+<section class="intro"><div class="eyebrow">THE JUST-ONE-MORE GAME</div><h1>Find your color.<br>Make some <em>noise.</em></h1><p>Big matches. Bigger blasts.<br>A little chaos looks good on you.</p><div class="how-label"><span>↓</span> YOUR NEXT OBSESSION</div><div class="mini-blocks" aria-hidden="true"><i class="pink">✦</i><i class="orange">✦</i><i class="blue">✦</i></div></section>
+<section class="game-section" aria-label="Block blast game">
+<div class="game-topline"><span><i></i> BLAST MODE</span><button id="restart" class="text-button">↻ <span>New game</span></button></div>
+<div class="scoreboard"><div><span class="stat-label">SCORE</span><strong id="score">0</strong></div><div class="best-stat"><span class="stat-label">♛ PERSONAL BEST</span><strong id="best">0</strong></div><div class="moves-stat"><span class="stat-label">MOVES LEFT</span><strong id="moves">30</strong></div></div>
+<div class="progress-track"><div id="progress"></div></div><div class="goal-line"><span id="goal-label">LET’S WARM THINGS UP</span><span id="goal-value">0 / 3,000</span></div>
+<div class="board-shell"><div id="board" role="grid" aria-label="8 by 8 block board"></div><canvas id="particles" aria-hidden="true"></canvas><div id="toast" role="status" aria-live="polite"></div><div id="end-screen" class="end-screen" hidden><div class="end-icon">✦</div><div class="eyebrow">NICELY BLASTED</div><h2>What a rush.</h2><p>You made <strong id="final-score">0</strong> points of beautiful chaos.</p><button id="play-again" class="primary-button">One more round <span>↗</span></button></div></div>
+<div class="board-footer"><span><i></i> <span id="hint">Tap 4+ connected blocks of the same color</span></span><button id="shake" title="Shuffle the board for one move" aria-label="Shuffle the board for one move">⤨ <span>Shuffle</span></button></div>
+</section>
+<aside class="guide"><div class="eyebrow">A LITTLE BLAST THEORY</div><h2>Go big.<br>Then go bigger.</h2><div class="rule"><div class="rule-icon match-icon">✦</div><div><span class="rule-count">4 BLOCKS</span><h3>The sweet spot</h3><p>Tap a matching group.<br>Watch it pop.</p></div></div><div class="rule"><div class="rule-icon rocket-icon">➜</div><div><span class="rule-count">5–9 BLOCKS</span><h3>Rocket fuel</h3><p>Make a rocket. Clear a<br>whole row or column.</p></div></div><div class="rule"><div class="rule-icon tnt-icon">TNT</div><div><span class="rule-count">10+ BLOCKS</span><h3>Big blast energy</h3><p>Drop some TNT.<br>Blow away a 5 × 5 area.</p></div></div><div class="combo-card"><div class="combo-symbol">➜ <span>+</span> ↑</div><h3>Better together.</h3><p>Tap adjacent rockets for a<br>massive 3-row + 3-column blast.</p><span class="combo-tag">DOUBLE ROCKET. TRIPLE CHAOS.</span></div></aside>
+</main><footer><span>NO DOWNLOADS. JUST DOPAMINE.</span><span>Made for your five-minute break <i>✦</i></span></footer>
+<script type="module" src="game.js"></script></body></html>
