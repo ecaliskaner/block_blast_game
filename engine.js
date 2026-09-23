@@ -9,23 +9,27 @@ export function groupAt(board, start) {
 }
 export function blastAt(board, start) {
   const hit = new Set(), fired = new Set(), queue = [start];
-  let combo = false;
-  const add = i => { if (i >= 0 && i < SIZE * SIZE) { hit.add(i); if (board[i]?.type !== 'color' && board[i] && !fired.has(i)) queue.push(i); } };
+  let combo = false, affected = new Set();
+  const bursts = [];
+  const add = i => { if (i >= 0 && i < SIZE * SIZE) { hit.add(i); affected.add(i); if (board[i]?.type !== 'color' && board[i] && !fired.has(i)) queue.push(i); } };
   while (queue.length) {
     const i = queue.shift(); if (fired.has(i)) continue; fired.add(i);
     const cell = board[i], row = Math.floor(i / SIZE), col = i % SIZE;
+    affected = new Set();
+    let paired = false;
     if (cell.type === 'rocket') {
       const partner = neighbors(i).find(n => board[n]?.type === 'rocket' && !fired.has(n));
       if (partner !== undefined) {
-        combo = true; fired.add(partner); add(partner);
+        combo = true; paired = true; fired.add(partner); add(partner);
         for (let n = 0; n < SIZE * SIZE; n++) if (Math.abs(Math.floor(n / SIZE) - row) <= 1 || Math.abs(n % SIZE - col) <= 1) add(n);
       } else for (let n = 0; n < SIZE; n++) add(cell.axis === 'row' ? row * SIZE + n : n * SIZE + col);
     } else if (cell.type === 'tnt') {
       for (let r = Math.max(0, row - 2); r <= Math.min(SIZE - 1, row + 2); r++) for (let c = Math.max(0, col - 2); c <= Math.min(SIZE - 1, col + 2); c++) add(r * SIZE + c);
     }
     add(i);
+    bursts.push({index:i,type:cell.type,axis:cell.axis,combo:paired,cells:[...affected]});
   }
-  return { cells: [...hit], combo };
+  return { cells: [...hit], combo, bursts };
 }
 export function hasMoves(board) { return board.some((cell, i) => cell.type !== 'color' || groupAt(board, i).length >= 4); }
 export function collapse(board, randomCell) {

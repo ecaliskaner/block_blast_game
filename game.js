@@ -1,8 +1,11 @@
 import { SIZE, groupAt, blastAt, hasMoves, collapseWithMotion } from './engine.js';
+import { planBlast } from './effects-plan.js';
+import { createEffects, rocketMarkup } from './effects.js';
 const $ = id => document.getElementById(id);
 const colors = ['pink','orange','blue','purple','green'];
 const symbols = ['✦','◆','●','✿','⬟'];
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const effects = createEffects($('board'),document.querySelector('.board-shell'),reduced);
 let board = [], score = 0, moves = 30, best = 0, busy = false, generation = 0, audio, sound = false;
 try { best = Number(localStorage.getItem('pop-best')) || 0; } catch {}
 const randomCell = () => ({type:'color', color:Math.floor(Math.random() * 5)});
@@ -30,7 +33,7 @@ function render(motion = new Map()) {
       button.className = `block ${cell.type === 'color' ? colors[cell.color] : 'special ' + cell.type}`;
       button.dataset.tileId = String(++tileId);
       button.setAttribute('role','gridcell');
-      button.innerHTML = cell.type === 'color' ? `<span class="gem" aria-hidden="true">${symbols[cell.color]}</span>` : cell.type === 'rocket' ? `<span class="rocket ${cell.axis === 'col' ? 'vertical' : ''}" aria-hidden="true">➜</span>` : '<span class="tnt-label" aria-hidden="true">TNT</span>';
+      button.innerHTML = cell.type === 'color' ? `<span class="gem" aria-hidden="true">${symbols[cell.color]}</span>` : cell.type === 'rocket' ? `<span class="rocket ${cell.axis === 'col' ? 'vertical' : ''}" aria-hidden="true">${rocketMarkup}</span>` : '<span class="tnt-label" aria-hidden="true">TNT</span>';
       tiles.set(cell,button);
       $('board').append(button);
     }
@@ -57,6 +60,7 @@ function updateHint(special = false) {
   $('shake').setAttribute('aria-label',stuck ? 'Shuffle the board for free' : 'Shuffle the board for one move');
 }
 function start() {
+  effects.reset();
   generation++; busy = false; score = 0; moves = 30; board = Array.from({length:64}, randomCell);
   // A friendly first move teaches the rocket mechanic naturally.
   for (const i of [26,27,28,35,36]) board[i] = {type:'color',color:0};
@@ -76,41 +80,77 @@ function playTone(power = 1) {
     }
   } catch {}
 }
-const canvas = $('particles'), ctx = canvas.getContext('2d'); let pieces = [], frame = 0;
+function playBlastSound(event) {
+  if (!sound) return;
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume();
+    const now = audio.currentTime, tnt = event.type === 'tnt';
+    const length = tnt ? .65 : .45;
+    const buffer = audio.createBuffer(1,Math.ceil(audio.sampleRate*length),audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+    const source = audio.createBufferSource(), filter = audio.createBiquadFilter(), gain = audio.createGain();
+    source.buffer = buffer; source.connect(filter); filter.connect(gain); gain.connect(audio.destination);
+    filter.type = tnt ? 'lowpass' : 'bandpass'; filter.Q.value = .7;
+    filter.frequency.setValueAtTime(tnt ? 1800 : 500,now);
+    filter.frequency.exponentialRampToValueAtTime(tnt ? 80 : 3800,now+length);
+    gain.gain.setValueAtTime(.001,now); gain.gain.exponentialRampToValueAtTime(tnt ? .25 : .12,now+.1); gain.gain.exponentialRampToValueAtTime(.001,now+length);
+    source.start(now); source.stop(now+length);
+    const bass = audio.createOscillator(), bassGain = audio.createGain();
+    bass.connect(bassGain); bassGain.connect(audio.destination);
+    bass.frequency.setValueAtTime(tnt ? 100 : 170,now+.12); bass.frequency.exponentialRampToValueAtTime(35,now+.4);
+    bassGain.gain.setValueAtTime(.001,now); bassGain.gain.setValueAtTime(.18,now+.12); bassGain.gain.exponentialRampToValueAtTime(.001,now+.45);
+    bass.start(now); bass.stop(now+.46);
+  } catch {}
+}
+const canvas = $('particles'), ctx = canvas.getContext('2d'); let pieces = [], frame = 0, previousFrame = 0;
 function particles(indices) {
   if (reduced) return;
   const rect = $('board').getBoundingClientRect(), outer = canvas.getBoundingClientRect();
-  canvas.width = outer.width * devicePixelRatio; canvas.height = outer.height * devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  const scale = Math.min(devicePixelRatio,2);
+  if (canvas.width !== Math.round(outer.width*scale) || canvas.height !== Math.round(outer.height*scale)) {
+    canvas.width = Math.round(outer.width*scale); canvas.height = Math.round(outer.height*scale);
+  }
+  ctx.setTransform(scale,0,0,scale,0,0);
   const palette = ['#f26a9c','#ffb54e','#57baf0','#9b80ed','#a9d974'];
   for (const i of indices) for (let n = 0; n < 8; n++) pieces.push({x:rect.left - outer.left + (i % 8 + .5) * rect.width / 8,y:rect.top - outer.top + (Math.floor(i / 8) + .5) * rect.height / 8,vx:(Math.random() - .5) * 10,vy:-Math.random() * 8 - 1,life:1,size:3 + Math.random() * 5,color:palette[board[i]?.color] || '#efffab'});
-  if (!frame) draw();
+  if (!frame) {previousFrame = performance.now(); frame = requestAnimationFrame(draw);}
 }
-function draw() {
+function draw(now) {
+  const dt = Math.min(2,(now - previousFrame)/16.667); previousFrame = now;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   pieces = pieces.filter(p => p.life > 0);
-  for (const p of pieces) { p.x += p.vx; p.y += p.vy; p.vy += .24; p.life -= .025; ctx.globalAlpha = Math.max(0,p.life); ctx.fillStyle = p.color; ctx.fillRect(p.x,p.y,p.size,p.size); }
+  for (const p of pieces) { p.x += p.vx*dt; p.y += p.vy*dt; p.vy += .24*dt; p.life -= .025*dt; ctx.globalAlpha = Math.max(0,p.life); ctx.fillStyle = p.color; ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.life*5);ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.6);ctx.restore(); }
   ctx.globalAlpha = 1; frame = pieces.length ? requestAnimationFrame(draw) : 0;
 }
 async function activate(index) {
   if (busy || moves <= 0) return;
   const restoreFocus = document.activeElement === tileAt(index);
-  const cell = board[index]; let indices, special, combo = false;
+  const cell = board[index]; let indices, special, combo = false, blast;
   if (cell.type === 'color') {
     indices = groupAt(board,index);
     if (indices.length < 4) { const el = tileAt(index); el.classList.remove('invalid'); void el.offsetWidth; el.classList.add('invalid'); $('hint').textContent = 'Connect at least 4 of the same color'; return; }
     if (indices.length >= 10) special = {type:'tnt'};
     else if (indices.length >= 5) special = {type:'rocket',axis:Math.random() < .5 ? 'row' : 'col'};
-  } else { const blast = blastAt(board,index); indices = blast.cells; combo = blast.combo; }
+  } else { blast = blastAt(board,index); indices = blast.cells; combo = blast.combo; }
   busy = true; const current = generation; moves--; score += indices.length * 40 + (special ? indices.length * 20 : 0) + (combo ? 500 : 0); saveBest(); stats();
-  indices.forEach(i => tileAt(i).classList.add('pop')); particles(indices); playTone(cell.type !== 'color' ? 2 : 1);
-    if (!reduced && (cell.type !== 'color' || special)) { const shell = document.querySelector('.board-shell'); shell.classList.remove('shaking'); void shell.offsetWidth; shell.classList.add('shaking'); }
+  let clearAfter = 210;
+  if (blast) {
+    const plan = planBlast(blast.bursts);
+    for (const event of plan.events) effects.later(() => {effects.burst(event); playBlastSound(event);},reduced ? 0 : event.start);
+    for (const [i,at] of plan.hits) effects.later(() => {tileAt(i)?.classList.add('pop'); particles([i]);},reduced ? 0 : at);
+    clearAfter = reduced ? 170 : plan.duration;
+  } else {
+    indices.forEach(i => tileAt(i).classList.add('pop')); particles(indices); playTone();
+  }
   if (combo) announce('Double rocket'); else if (cell.type === 'tnt') announce('Boom!'); else if (special?.type === 'tnt') announce('TNT ready'); else if (special) announce('Rocket ready'); else announce(`+${indices.length * 40}`);
-  await delay(reduced ? 0 : 210); if (current !== generation) return;
+  await delay(reduced && !blast ? 0 : clearAfter); if (current !== generation) return;
   indices.forEach(i => board[i] = null); if (special) board[index] = special;
   const fall = collapseWithMotion(board,randomCell); board = fall.board; render(fall.motion);
   if (restoreFocus) tileAt(index).focus({preventScroll:true});
   updateHint(Boolean(special));
   await delay(reduced ? 0 : 430); if (current !== generation) return; busy = false;
+  if (special) effects.celebrate(tiles.get(special));
   if (moves === 0) { $('final-score').textContent = score.toLocaleString(); $('end-screen').hidden = false; $('play-again').focus(); }
 }
 $('board').addEventListener('click',event => { const block = event.target.closest('.block'); if (block) activate(Number(block.dataset.index)); });

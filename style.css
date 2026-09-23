@@ -13,3 +13,13 @@
 .board-clip{position:relative;z-index:0}
 body{overflow-x:clip}
 .game-section{overflow:hidden}
+/* Power-up effects sit above tiles, leaving the board's layout untouched. */
+.blast-effects{position:absolute;inset:9px;z-index:4;pointer-events:none;overflow:hidden;border-radius:9px}
+.block > .rocket{display:block;width:92%;height:75%}.rocket-art{width:100%;height:100%;stroke:none;overflow:visible}.rocket.vertical{transform:rotate(-90deg)}
+.rocket-lane{position:absolute;width:0;height:0;transform-origin:0 0}.flying-rocket{position:absolute;left:0;top:0;width:48px;height:28px;filter:drop-shadow(0 0 6px #ffcf6a)}
+.flying-rocket:before{content:'';position:absolute;right:88%;top:8px;width:25px;height:12px;border-radius:100% 0 0 100%;background:linear-gradient(90deg,transparent,#ff9c39 40%,#fff8d6);box-shadow:8px 0 14px #ffbf58}
+.rocket-trail{position:absolute;left:0;top:-7px;height:14px;background:linear-gradient(0deg,transparent,#ffd47b66 20%,#fff8d9 50%,#ffd47b66 80%,transparent);box-shadow:0 0 15px #ffd17588;border-radius:9px}
+.blast-ring{position:absolute;border:4px solid #ffefb6;border-radius:50%;box-shadow:0 0 20px #ffc671,inset 0 0 18px #ffc671;transform-origin:center}.tnt-ring{border-width:8px;border-color:#ffdb9b;box-shadow:0 0 24px #ffaf51,inset 0 0 25px #ffaf51}
+.blast-cloud{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff8d9 0%,#ffda8599 25%,#f4833d55 45%,transparent 68%);mix-blend-mode:screen}
+.impact-mark{position:absolute;transform:translate(-50%,-50%);color:#fff6cc;font-size:44px;font-weight:800}
+

@@ -21,6 +21,8 @@ The UI is designed as a portrait mobile game. Surviving blocks retain their DOM 
 
 Sound is opt-in. Reduced-motion preferences are respected. Blocks have distinct shapes, accessible labels, arrow-key navigation, and native keyboard activation. Best scores persist locally when browser storage is available.
 
+Rockets launch in both directions with flame trails and timed tile impacts. Double rockets launch along all three affected rows and columns. TNT creates an expanding shockwave. Chain effects begin when the incoming blast reaches each power-up. Optional synthesized whooshes and bass impacts accompany the visuals. Restart cancels pending visual effects, and reduced-motion mode uses brief static impact markers.
+
 ## Hosting
 
-The game is static: deploy `index.html`, `style.css`, `game.js`, and `engine.js` on any static web host. Google Fonts is optional; system font fallbacks are supplied.
+The game is static: deploy `index.html`, `style.css`, `game.js`, `engine.js`, `effects.js`, and `effects-plan.js` on any static web host. It uses system fonts and requires no external assets.
