@@ -1,18 +1,44 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111322"><title>POP! — One more blast.</title><link rel="stylesheet" href="style.css"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e9">
+  <title>Pop — Block game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 <body>
-<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-<header class="site-header"><a class="brand" href="./" aria-label="POP home">pop<span>!</span><i></i></a><div class="header-note"><span></span> SMALL BLOCKS. BIG ENERGY.</div><button class="icon-button" id="sound" aria-label="Enable sound" title="Toggle sound">♫<span class="sound-state">OFF</span></button></header>
-<main>
-<section class="intro"><div class="eyebrow">THE JUST-ONE-MORE GAME</div><h1>Find your color.<br>Make some <em>noise.</em></h1><p>Big matches. Bigger blasts.<br>A little chaos looks good on you.</p><div class="how-label"><span>↓</span> YOUR NEXT OBSESSION</div><div class="mini-blocks" aria-hidden="true"><i class="pink">✦</i><i class="orange">✦</i><i class="blue">✦</i></div></section>
-<section class="game-section" aria-label="Block blast game">
-<div class="game-topline"><span><i></i> BLAST MODE</span><button id="restart" class="text-button">↻ <span>New game</span></button></div>
-<div class="scoreboard"><div><span class="stat-label">SCORE</span><strong id="score">0</strong></div><div class="best-stat"><span class="stat-label">♛ PERSONAL BEST</span><strong id="best">0</strong></div><div class="moves-stat"><span class="stat-label">MOVES LEFT</span><strong id="moves">30</strong></div></div>
-<div class="progress-track"><div id="progress"></div></div><div class="goal-line"><span id="goal-label">LET’S WARM THINGS UP</span><span id="goal-value">0 / 3,000</span></div>
-<div class="board-shell"><div id="board" role="grid" aria-label="8 by 8 block board"></div><canvas id="particles" aria-hidden="true"></canvas><div id="toast" role="status" aria-live="polite"></div><div id="end-screen" class="end-screen" hidden><div class="end-icon">✦</div><div class="eyebrow">NICELY BLASTED</div><h2>What a rush.</h2><p>You made <strong id="final-score">0</strong> points of beautiful chaos.</p><button id="play-again" class="primary-button">One more round <span>↗</span></button></div></div>
-<div class="board-footer"><span><i></i> <span id="hint">Tap 4+ connected blocks of the same color</span></span><button id="shake" title="Shuffle the board for one move" aria-label="Shuffle the board for one move">⤨ <span>Shuffle</span></button></div>
-</section>
-<aside class="guide"><div class="eyebrow">A LITTLE BLAST THEORY</div><h2>Go big.<br>Then go bigger.</h2><div class="rule"><div class="rule-icon match-icon">✦</div><div><span class="rule-count">4 BLOCKS</span><h3>The sweet spot</h3><p>Tap a matching group.<br>Watch it pop.</p></div></div><div class="rule"><div class="rule-icon rocket-icon">➜</div><div><span class="rule-count">5–9 BLOCKS</span><h3>Rocket fuel</h3><p>Make a rocket. Clear a<br>whole row or column.</p></div></div><div class="rule"><div class="rule-icon tnt-icon">TNT</div><div><span class="rule-count">10+ BLOCKS</span><h3>Big blast energy</h3><p>Drop some TNT.<br>Blow away a 5 × 5 area.</p></div></div><div class="combo-card"><div class="combo-symbol">➜ <span>+</span> ↑</div><h3>Better together.</h3><p>Tap adjacent rockets for a<br>massive 3-row + 3-column blast.</p><span class="combo-tag">DOUBLE ROCKET. TRIPLE CHAOS.</span></div></aside>
-</main><footer><span>NO DOWNLOADS. JUST DOPAMINE.</span><span>Made for your five-minute break <i>✦</i></span></footer>
-<script type="module" src="game.js"></script></body></html>
+  <main class="game-section" aria-label="Block blast game">
+    <header class="topbar">
+      <h1>pop<span>.</span></h1>
+      <div class="top-actions">
+        <button id="sound" class="icon-button" aria-label="Enable sound" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4zM16 9a5 5 0 0 1 0 6M19 5a10 10 0 0 1 0 14"/></svg><span class="sound-state">OFF</span></button>
+        <button id="help" class="icon-button" aria-label="How to play">?</button>
+      </div>
+    </header>
+    <section class="scoreboard" aria-label="Round stats">
+      <div class="score-stat"><span class="stat-label">Score</span><strong id="score">0</strong></div>
+      <div class="moves-stat"><strong id="moves">30</strong><span class="stat-label">moves</span></div>
+    </section>
+    <div class="record-line"><span>Best <strong id="best">0</strong></span><span id="goal-value">0 / 3,000</span></div>
+    <div class="progress-track"><div id="progress"></div></div>
+    <div class="board-shell">
+      <div class="board-clip"><div id="board" role="grid" aria-label="8 by 8 block board"></div></div>
+      <canvas id="particles" aria-hidden="true"></canvas>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="end-screen" class="end-screen" hidden>
+        <span class="stat-label">Round complete</span><h2>Nice playing.</h2><strong id="final-score">0</strong><p>points</p>
+        <button id="play-again" class="primary-button">Play again <span>↗</span></button>
+      </div>
+    </div>
+    <p id="hint" class="hint" role="status">Tap 4 or more matching blocks</p>
+    <div class="controls">
+      <button id="restart" class="control-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg><span>Restart</span></button>
+      <button id="shake" class="control-button" aria-label="Shuffle the board for one move"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h3c5 0 7 12 12 12h3M17 14l4 4-4 4M3 18h3c2 0 4-3 6-6s4-6 6-6h3M17 2l4 4-4 4"/></svg><span>Shuffle <small id="shuffle-cost">−1 move</small></span></button>
+    </div>
+    <div class="quick-rules" aria-label="Match rewards"><span><i class="mini-tile"></i>4 pop</span><span><i class="mini-rocket">↗</i>5+ rocket</span><span><i class="mini-tnt">TNT</i>10+ TNT</span></div>
+    <dialog id="help-dialog"><button id="close-help" class="close-button" aria-label="Close instructions">×</button><h2>Make a match.</h2><p>Tap a group of blocks of the same color. They connect across or down, never diagonally.</p><dl><dt>4 blocks</dt><dd>Clear the group.</dd><dt>5–9 blocks</dt><dd>Create a rocket. Tap it to clear the row or column its arrow points along.</dd><dt>10+ blocks</dt><dd>Create TNT. Tap it to clear a 5 × 5 area.</dd><dt>Two rockets together</dt><dd>Tap either adjacent rocket to clear three rows and three columns.</dd></dl><p>Blasts trigger other power-ups. You have 30 moves. If no matches remain, you can shuffle for free.</p></dialog>
+  </main>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

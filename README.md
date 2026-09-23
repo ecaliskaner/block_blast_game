@@ -15,7 +15,9 @@ Use Node.js 20 or later, run `npm start`, and open http://localhost:3000. Run `n
 - Explosions trigger other power-ups in their path. New power-ups remain on the board and fall with gravity.
 - Each valid tap costs one of 30 moves. Invalid taps are free. A shuffle costs one move and retains power-ups.
 - Earn 40 points per cleared block, another 20 per block when creating a power-up, and 500 bonus points for a double rocket blast.
-- Boards without any possible move automatically gain a matching group.
+- Boards without any possible move offer a free, player-triggered shuffle. Ordinary moves never recolor or shuffle surviving blocks.
+
+The UI is designed as a portrait mobile game. Surviving blocks retain their DOM nodes and positions; gravity animates only tiles above cleared spaces. Replacement blocks enter from above their column, clipped by the board frame. Desktop uses the same compact game screen. Instructions are behind the question-mark button.
 
 Sound is opt-in. Reduced-motion preferences are respected. Blocks have distinct shapes, accessible labels, arrow-key navigation, and native keyboard activation. Best scores persist locally when browser storage is available.
 

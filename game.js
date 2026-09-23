@@ -1,4 +1,4 @@
-import { SIZE, groupAt, blastAt, hasMoves, collapse } from './engine.js';
+import { SIZE, groupAt, blastAt, hasMoves, collapseWithMotion } from './engine.js';
 const $ = id => document.getElementById(id);
 const colors = ['pink','orange','blue','purple','green'];
 const symbols = ['✦','◆','●','✿','⬟'];
@@ -13,30 +13,55 @@ function stats() {
   const goal = Math.max(3000, Math.ceil((score + 1) / 3000) * 3000);
   $('progress').style.width = `${Math.min(100, score / goal * 100)}%`;
   $('goal-value').textContent = `${score.toLocaleString()} / ${goal.toLocaleString()}`;
-  $('goal-label').textContent = score >= 6000 ? 'ABSOLUTE BLAST LEGEND' : score >= 3000 ? 'YOU’RE ON FIRE' : score >= 1000 ? 'NOW WE’RE TALKING' : 'LET’S WARM THINGS UP';
 }
-function render(animate = false) {
-  $('board').replaceChildren(...board.map((cell, i) => {
-    const button = document.createElement('button'); button.className = `block ${cell.type === 'color' ? colors[cell.color] : 'special ' + cell.type}${animate ? ' enter' : ''}`;
-    button.dataset.index = i; button.setAttribute('role','gridcell');
+const tiles = new Map();
+let tileId = 0;
+const tileAt = index => tiles.get(board[index]);
+function render(motion = new Map()) {
+  const live = new Set(board);
+  for (const [cell, node] of tiles) {
+    if (!live.has(cell)) { node.remove(); tiles.delete(cell); }
+  }
+  const pitch = $('board').clientHeight / SIZE;
+  board.forEach((cell, i) => {
+    let button = tiles.get(cell);
+    if (!button) {
+      button = document.createElement('button');
+      button.className = `block ${cell.type === 'color' ? colors[cell.color] : 'special ' + cell.type}`;
+      button.dataset.tileId = String(++tileId);
+      button.setAttribute('role','gridcell');
+      button.innerHTML = cell.type === 'color' ? `<span class="gem" aria-hidden="true">${symbols[cell.color]}</span>` : cell.type === 'rocket' ? `<span class="rocket ${cell.axis === 'col' ? 'vertical' : ''}" aria-hidden="true">➜</span>` : '<span class="tnt-label" aria-hidden="true">TNT</span>';
+      tiles.set(cell,button);
+      $('board').append(button);
+    }
+    button.dataset.index = i;
+    button.style.left = `${i % SIZE * 12.5}%`;
+    button.style.top = `${Math.floor(i / SIZE) * 12.5}%`;
+    button.style.zIndex = Math.floor(i / SIZE) + 1;
+    button.tabIndex = i === 0 ? 0 : -1;
     button.setAttribute('aria-label', `${cell.type === 'color' ? colors[cell.color] + ' block' : cell.type === 'rocket' ? cell.axis + ' rocket' : 'TNT'}, row ${Math.floor(i / SIZE) + 1}, column ${i % SIZE + 1}`);
-    button.innerHTML = cell.type === 'color' ? `<span class="gem">${symbols[cell.color]}</span>` : cell.type === 'rocket' ? `<span class="rocket ${cell.axis === 'col' ? 'vertical' : ''}">➜</span>` : '<span class="tnt-label">TNT</span>';
-    if (animate) button.style.animationDelay = `${Math.floor(i / SIZE) * 12}ms`;
-    return button;
-  })); stats();
+    const path = motion.get(cell);
+    if (!reduced && path && path.fromRow !== path.toRow) {
+      button.animate([
+        {transform:`translateY(${(path.fromRow - path.toRow) * pitch}px)`},
+        {transform:'translateY(0)'}
+      ], {duration:420,easing:'cubic-bezier(.32,.05,.42,1)'});
+    }
+  });
+  stats();
 }
-function ensureMoves() {
-  if (hasMoves(board)) return false;
-  // Guarantee a legal group without discarding earned power-ups.
-  const color = Math.floor(Math.random() * 5);
-  for (const i of [48,49,56,57]) board[i] = {type:'color',color};
-  return true;
+function updateHint(special = false) {
+  const stuck = !hasMoves(board);
+  $('hint').textContent = stuck ? 'No matches. Shuffle for free.' : special ? 'Tap your power-up when you’re ready' : 'Tap 4 or more matching blocks';
+  $('shuffle-cost').textContent = stuck ? 'Free' : '−1 move';
+  $('shake').setAttribute('aria-label',stuck ? 'Shuffle the board for free' : 'Shuffle the board for one move');
 }
 function start() {
   generation++; busy = false; score = 0; moves = 30; board = Array.from({length:64}, randomCell);
   // A friendly first move teaches the rocket mechanic naturally.
   for (const i of [26,27,28,35,36]) board[i] = {type:'color',color:0};
-  $('end-screen').hidden = true; $('toast').classList.remove('show'); $('hint').textContent = 'Tap 4+ connected blocks of the same color'; render(true);
+  pieces = []; if (frame) cancelAnimationFrame(frame); frame = 0; ctx.clearRect(0,0,canvas.width,canvas.height);
+  $('end-screen').hidden = true; $('toast').classList.remove('show'); render(); updateHint();
 }
 function announce(message) { $('toast').textContent = message; $('toast').classList.remove('show'); void $('toast').offsetWidth; $('toast').classList.add('show'); }
 function playTone(power = 1) {
@@ -68,29 +93,40 @@ function draw() {
 }
 async function activate(index) {
   if (busy || moves <= 0) return;
-  const restoreFocus = document.activeElement === $('board').children[index];
+  const restoreFocus = document.activeElement === tileAt(index);
   const cell = board[index]; let indices, special, combo = false;
   if (cell.type === 'color') {
     indices = groupAt(board,index);
-    if (indices.length < 4) { const el = $('board').children[index]; el.classList.remove('invalid'); void el.offsetWidth; el.classList.add('invalid'); $('hint').textContent = 'Find a group of at least 4 matching blocks'; return; }
+    if (indices.length < 4) { const el = tileAt(index); el.classList.remove('invalid'); void el.offsetWidth; el.classList.add('invalid'); $('hint').textContent = 'Connect at least 4 of the same color'; return; }
     if (indices.length >= 10) special = {type:'tnt'};
     else if (indices.length >= 5) special = {type:'rocket',axis:Math.random() < .5 ? 'row' : 'col'};
   } else { const blast = blastAt(board,index); indices = blast.cells; combo = blast.combo; }
   busy = true; const current = generation; moves--; score += indices.length * 40 + (special ? indices.length * 20 : 0) + (combo ? 500 : 0); saveBest(); stats();
-  indices.forEach(i => $('board').children[i].classList.add('pop')); particles(indices); playTone(cell.type !== 'color' ? 2 : 1);
+  indices.forEach(i => tileAt(i).classList.add('pop')); particles(indices); playTone(cell.type !== 'color' ? 2 : 1);
     if (!reduced && (cell.type !== 'color' || special)) { const shell = document.querySelector('.board-shell'); shell.classList.remove('shaking'); void shell.offsetWidth; shell.classList.add('shaking'); }
-  if (combo) announce('TRIPLE CHAOS!'); else if (cell.type === 'tnt') announce('BOOM!'); else if (special?.type === 'tnt') announce('TNT! OH, YES.'); else if (special) announce('ROCKET READY!'); else if (indices.length === 4) announce('+160');
+  if (combo) announce('Double rocket'); else if (cell.type === 'tnt') announce('Boom!'); else if (special?.type === 'tnt') announce('TNT ready'); else if (special) announce('Rocket ready'); else announce(`+${indices.length * 40}`);
   await delay(reduced ? 0 : 210); if (current !== generation) return;
   indices.forEach(i => board[i] = null); if (special) board[index] = special;
-  board = collapse(board,randomCell); const rescued = ensureMoves(); render(true);
-  if (restoreFocus) $('board').children[index].focus({preventScroll:true});
-  $('hint').textContent = rescued ? 'Fresh match added — keep the blasts going!' : special ? 'Tap your power-up to set it off!' : 'Tap 4+ connected blocks of the same color';
-  await delay(reduced ? 0 : 320); if (current !== generation) return; busy = false;
+  const fall = collapseWithMotion(board,randomCell); board = fall.board; render(fall.motion);
+  if (restoreFocus) tileAt(index).focus({preventScroll:true});
+  updateHint(Boolean(special));
+  await delay(reduced ? 0 : 430); if (current !== generation) return; busy = false;
   if (moves === 0) { $('final-score').textContent = score.toLocaleString(); $('end-screen').hidden = false; $('play-again').focus(); }
 }
 $('board').addEventListener('click',event => { const block = event.target.closest('.block'); if (block) activate(Number(block.dataset.index)); });
-$('board').addEventListener('keydown', event => { const block = event.target.closest('.block'); if (!block) return; const index = Number(block.dataset.index); const offsets = {ArrowLeft:-1,ArrowRight:1,ArrowUp:-8,ArrowDown:8}; if (event.key in offsets) { event.preventDefault(); $('board').children[Math.max(0,Math.min(63,index + offsets[event.key]))].focus(); } });
+$('board').addEventListener('keydown', event => { const block = event.target.closest('.block'); if (!block) return; const index = Number(block.dataset.index); const offsets = {ArrowLeft:-1,ArrowRight:1,ArrowUp:-8,ArrowDown:8}; if (event.key in offsets) { event.preventDefault(); tileAt(Math.max(0,Math.min(63,index + offsets[event.key]))).focus(); } });
 $('restart').addEventListener('click',start); $('play-again').addEventListener('click',start);
 $('sound').addEventListener('click',() => { sound = !sound; $('sound').setAttribute('aria-label',sound ? 'Disable sound' : 'Enable sound'); $('sound').setAttribute('aria-pressed',String(sound)); document.querySelector('.sound-state').textContent = sound ? 'ON' : 'OFF'; if (sound) playTone(); });
-$('shake').addEventListener('click',() => { if (busy || moves <= 0) return; for (let i = board.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [board[i],board[j]] = [board[j],board[i]]; } moves--; ensureMoves(); render(true); announce('REMIX!'); if (!moves) { $('final-score').textContent = score.toLocaleString(); $('end-screen').hidden = false; $('play-again').focus(); } });
+$('shake').addEventListener('click',() => {
+  if (busy || moves <= 0) return;
+  if (hasMoves(board)) moves--;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    for (let i = board.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [board[i],board[j]] = [board[j],board[i]]; }
+    if (hasMoves(board)) break;
+  }
+  render(); updateHint(); announce('Shuffled');
+  if (!moves) { $('final-score').textContent = score.toLocaleString(); $('end-screen').hidden = false; $('play-again').focus(); }
+});
+$('help').addEventListener('click',() => $('help-dialog').showModal());
+$('close-help').addEventListener('click',() => $('help-dialog').close());
 start();

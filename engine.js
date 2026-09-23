@@ -29,11 +29,26 @@ export function blastAt(board, start) {
 }
 export function hasMoves(board) { return board.some((cell, i) => cell.type !== 'color' || groupAt(board, i).length >= 4); }
 export function collapse(board, randomCell) {
+  return collapseWithMotion(board, randomCell).board;
+}
+
+// Keep object identities and record the actual journey of every tile.
+// New tiles queue above their own column, never over surviving tiles.
+export function collapseWithMotion(board, randomCell) {
   const result = [...board];
+  const motion = new Map();
   for (let col = 0; col < SIZE; col++) {
     const kept = [];
-    for (let row = SIZE - 1; row >= 0; row--) if (board[row * SIZE + col]) kept.push(board[row * SIZE + col]);
-    for (let row = SIZE - 1; row >= 0; row--) result[row * SIZE + col] = kept[SIZE - 1 - row] || randomCell();
+    for (let row = SIZE - 1; row >= 0; row--) {
+      const cell = board[row * SIZE + col];
+      if (cell) kept.push({cell, row});
+    }
+    for (let row = SIZE - 1; row >= 0; row--) {
+      const survivor = kept[SIZE - 1 - row];
+      const cell = survivor?.cell || randomCell();
+      result[row * SIZE + col] = cell;
+      motion.set(cell, {fromRow: survivor ? survivor.row : row - (SIZE - kept.length), toRow: row, col, fresh: !survivor});
+    }
   }
-  return result;
+  return {board: result, motion};
 }
